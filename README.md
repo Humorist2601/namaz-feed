@@ -2,11 +2,18 @@
 
 # Namaz Timings RSS
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/readme-card-dark.png">
+  <img src="assets/readme-card-light.png" alt="Example card: Friday's prayer times in glass tiles with Arabic and English names, and the extra times below" width="640">
+</picture>
+
 A daily RSS feed of prayer times for a city of your choice, from the free Aladhan API.
 
 Each day gets one feed item titled like `2 Nov · 22 Jumada al-Ula`. It opens with a
 **card image**: a transparent 1280×800 PNG (English and Arabic prayer names in glass
-tiles) with no background of its own, so it blends into a dark reader. Readers that
+tiles, the extra times in a panel below, Zawal in amber, Jumu'ah tinted gold on Fridays)
+with no background of its own, so it blends into the reader. Set `CARD_THEME` to `"dark"`
+(light text, for dark-mode readers) or `"light"` (dark text, for light-mode readers). Readers that
 show an item's first picture as a header (like Brief You) display it at the top.
 The cards are drawn by `card.py` with headless Chromium, using the open-licence fonts
 in `assets/fonts`. If drawing ever fails, the feed still goes out with text only.
@@ -18,7 +25,14 @@ Below the card, the same information as text:
 
 - the full Gregorian and Hijri dates (marked Jumu'ah on Fridays)
 - Fajr, Dhuhr (Jumu'ah on Fridays), Asr, Maghrib, Isha
-- extras: Sunrise, Sunset, Islamic midnight, Tahajjud and day length
+- extras: Sunrise, Ishraq (20 min after sunrise), Chasht (a quarter of the day after
+  sunrise), Zawal (the Hanafi disliked time: midpoint of Fajr and Maghrib until Dhuhr),
+  Sunset, Islamic midnight, Tahajjud and day length
+- notes on special days: Islamic New Year, Ashura, 12 Rabi-ul-Awwal, Shab-e-Miraj,
+  Shab-e-Barat, Ramadan, Shab-e-Qadr and the other odd nights, both Eids (with the Eid
+  prayer window), Arafah, Takbeer-e-Tashreeq (9–13 Dhul Hijjah), the Days of Tashreeq when
+  fasting isn't permitted, the white days (13–15), and a Surah Al-Kahf reminder on Fridays
+  (shown on the card and in the text)
 - Sehri / Iftar labels during Ramadan
 
 All times are 24-hour. The feed keeps the last 7 days.
@@ -77,6 +91,7 @@ Edit the settings at the top of `generate_feed.py`:
 | `DAYS`     | `7`         | How many recent days the feed keeps                          |
 | `NEXT_DAY_FROM` | `21`   | From this hour (local), the newest item is tomorrow          |
 | `HIJRI_ADJUST` | `-1`    | Days to shift the calculated Hijri date to match local moon sighting; change to `0` or `-2` if it's ever a day off |
+| `CARD_THEME` | `"dark"` | Card and thumbnail colours: `"dark"` for dark-mode readers, `"light"` for light-mode readers |
 
 Committing the change rebuilds the feed straight away.
 The feed's name follows the city: `Namaz Timings (<City>)`.

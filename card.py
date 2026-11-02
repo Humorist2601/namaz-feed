@@ -4,6 +4,9 @@ The card has no background of its own, so in Brief You it sits on the reader's
 header tile and takes on the theme's colour. 1280x800 (16:10) matches Brief You's
 header picture on a Pixel 9 Pro, so it shows sharp and uncropped.
 
+Two colour themes: "dark" (light text, for dark-mode readers) and "light" (dark text,
+for light-mode readers). Pick one with CARD_THEME in generate_feed.py.
+
 Rendered with headless Chromium (Playwright) from HTML, using the fonts in assets/fonts.
 """
 import os
@@ -17,10 +20,22 @@ W, H = 1280, 800
 ARABIC = {"Fajr": "الفجر", "Dhuhr": "الظهر", "Jumu'ah": "الجمعة", "Asr": "العصر",
           "Maghrib": "المغرب", "Isha": "العشاء"}
 TITLE = "مواقيت الصلاة"
-FG, MUTED, GOLD = "#EEE8F4", "#B8B0C6", "#E9C77E"
+JUMUAH = "Jumu'ah"
+
+THEMES = {
+    "dark": {"fg": "#EEE8F4", "muted": "#B8B0C6", "gold": "#E9C77E", "amber": "#F2A65A",
+             "tile": "rgba(255,255,255,.055)", "line": "rgba(255,255,255,.10)",
+             "panel": "rgba(255,255,255,.04)", "panel_line": "rgba(255,255,255,.08)",
+             "jumuah": "rgba(233,199,126,.09)", "jumuah_line": "rgba(233,199,126,.60)"},
+    "light": {"fg": "#1D1B20", "muted": "#57525F", "gold": "#7E5A12", "amber": "#A9480C",
+              "tile": "rgba(0,0,0,.055)", "line": "rgba(0,0,0,.16)",
+              "panel": "rgba(0,0,0,.04)", "panel_line": "rgba(0,0,0,.13)",
+              "jumuah": "rgba(126,90,18,.11)", "jumuah_line": "rgba(126,90,18,.65)"},
+}
 
 
-def _css():
+def _css(theme="dark"):
+    c = THEMES.get(theme, THEMES["dark"])
     f = FONTS.as_uri()
     return f"""
 @font-face{{font-family:Amiri;src:url({f}/Amiri-Regular.ttf)}}
@@ -29,56 +44,69 @@ def _css():
 @font-face{{font-family:Cormorant;font-weight:300 700;src:url({f}/CormorantGaramond.ttf)}}
 *{{box-sizing:border-box;margin:0;padding:0}}
 html,body{{width:{W}px;height:{H}px;overflow:hidden;background:transparent}}
-body{{position:relative;font-family:Outfit,sans-serif;color:{FG};-webkit-font-smoothing:antialiased}}
+body{{position:relative;font-family:Outfit,sans-serif;color:{c["fg"]};-webkit-font-smoothing:antialiased}}
 .num{{font-variant-numeric:tabular-nums}}
-.head{{position:absolute;left:64px;right:64px;top:40px;display:flex;justify-content:space-between;align-items:flex-start}}
-.k{{font-size:29px;letter-spacing:.28em;color:{MUTED};font-weight:500;text-transform:uppercase}}
-.d{{font-size:58px;font-weight:300;margin-top:8px;letter-spacing:-.01em;white-space:nowrap}}
-.ttl{{font-family:Amiri;direction:rtl;font-size:58px;color:{GOLD};font-weight:700;text-align:right;line-height:1.35}}
-.h{{font-family:Cormorant;font-style:italic;font-size:38px;color:{MUTED};text-align:right;margin-top:2px;white-space:nowrap}}
-.row{{position:absolute;left:64px;right:64px;top:250px;display:flex;gap:16px}}
-.c{{flex:1;height:390px;border-radius:40px;background:rgba(255,255,255,.055);border:2px solid rgba(255,255,255,.10);
+.head{{position:absolute;left:64px;right:64px;top:34px;display:flex;justify-content:space-between;align-items:flex-start;gap:32px}}
+.k{{font-size:28px;letter-spacing:.28em;color:{c["muted"]};font-weight:500;text-transform:uppercase;white-space:nowrap}}
+.badge{{display:inline-block;margin-top:30px;padding:7px 20px;border-radius:999px;font-size:23px;letter-spacing:.14em;
+  text-transform:uppercase;white-space:nowrap;color:{c["gold"]};background:{c["jumuah"]};border:2px solid {c["jumuah_line"]}}}
+.d{{font-size:62px;font-weight:300;margin-top:2px;letter-spacing:-.01em;white-space:nowrap;line-height:1.1}}
+.ttl{{font-family:Amiri;direction:rtl;font-size:58px;color:{c["gold"]};font-weight:700;line-height:1.3}}
+.r{{position:absolute;right:0;top:0;display:flex;flex-direction:column;align-items:flex-end}}
+.h{{font-family:Cormorant;font-style:italic;font-size:40px;color:{c["muted"]};white-space:nowrap;line-height:1.15}}
+.row{{position:absolute;left:64px;right:64px;top:232px;display:flex;gap:16px}}
+.c{{flex:1;height:290px;border-radius:40px;background:{c["tile"]};border:2px solid {c["line"]};
    display:flex;flex-direction:column;align-items:center;justify-content:center}}
-.a{{font-family:Amiri;direction:rtl;font-size:54px;color:{GOLD};font-weight:700;line-height:1.3}}
-.en{{font-size:28px;letter-spacing:.14em;text-transform:uppercase;color:{MUTED};margin-top:4px;white-space:nowrap}}
+.c.j{{background:{c["jumuah"]};border-color:{c["jumuah_line"]}}}
+.a{{font-family:Amiri;direction:rtl;font-size:54px;color:{c["gold"]};font-weight:700;line-height:1.3}}
+.en{{font-size:28px;letter-spacing:.14em;text-transform:uppercase;color:{c["muted"]};margin-top:4px;white-space:nowrap}}
 .t{{font-size:74px;font-weight:400;margin-top:6px;letter-spacing:-.02em}}
-.note{{font-size:25px;letter-spacing:.12em;text-transform:uppercase;color:{GOLD};margin-top:6px;opacity:.9}}
-.ex{{position:absolute;left:64px;right:64px;bottom:36px;display:flex;justify-content:space-between;font-size:32px;color:{MUTED}}}
-.ex i{{font-style:normal;letter-spacing:.02em}}
-.ex b{{color:{FG};font-weight:500;margin-left:6px}}
+.note{{font-size:25px;letter-spacing:.12em;text-transform:uppercase;color:{c["gold"]};margin-top:6px}}
+.panel{{position:absolute;left:64px;right:64px;bottom:30px;height:204px;border-radius:32px;
+  background:{c["panel"]};border:2px solid {c["panel_line"]};
+  display:grid;grid-template-columns:repeat(4,1fr);align-content:center;row-gap:16px;padding:0 34px}}
+.xl{{font-size:22px;letter-spacing:.2em;text-transform:uppercase;color:{c["muted"]}}}
+.xv{{font-size:40px;margin-top:2px;white-space:nowrap}}
+.xv.avoid{{color:{c["amber"]}}}
 """
 
 
-def card_html(city, date_line, hijri_line, prayers, extras):
-    """prayers: list of (english name, time, note or ""); extras: list of (label, value)."""
+def card_html(city, date_line, hijri_line, prayers, extras, occasion="", theme="dark"):
+    """prayers: list of (english name, time, note or ""); extras: list of (label, value),
+    shown in a panel of two rows of four (Zawal, the time to avoid, in amber);
+    occasion: a special-day label shown as a gold badge under the Arabic title. Gold-tinted tiles mark Jumu'ah on
+    Fridays and Sehri/Iftar (Fajr/Maghrib) in Ramadan."""
     tiles = "".join(
-        f'<div class="c"><div class="a">{ARABIC.get(name, "")}</div><div class="en">{escape(name)}</div>'
-        f'<div class="t num">{time}</div>{f"<div class=note>{escape(note)}</div>" if note else ""}</div>'
+        f'<div class="c{" j" if name == JUMUAH or note else ""}"><div class="a">{ARABIC.get(name, "")}</div>'
+        f'<div class="en">{escape(name)}</div><div class="t num">{time}</div>'
+        f'{f"<div class=note>{escape(note)}</div>" if note else ""}</div>'
         for name, time, note in prayers)
-    ex = "".join(f'<span><i>{escape(k)}</i><b class="num">{escape(v)}</b></span>' for k, v in extras)
-    # Long dates ("Wednesday, 30 September 2026") get a slightly smaller size so they fit.
-    size = 58 if len(date_line) <= 24 else 50
-    return (f'<!doctype html><meta charset="utf-8"><style>{_css()}</style>'
+    panel = "".join(
+        f'<div><div class="xl">{escape(k)}</div>'
+        f'<div class="xv num{" avoid" if k == "Zawal" else ""}">{escape(v)}</div></div>'
+        for k, v in extras)
+    badge = f'<div class="badge">{escape(occasion)}</div>' if occasion else ""
+    return (f'<!doctype html><meta charset="utf-8"><style>{_css(theme)}</style>'
             f'<div class="head"><div><div class="k">Namaz · {escape(city)}</div>'
-            f'<div class="d" style="font-size:{size}px">{escape(date_line)}</div></div>'
-            f'<div><div class="ttl">{TITLE}</div><div class="h">{escape(hijri_line)}</div></div></div>'
-            f'<div class="row">{tiles}</div><div class="ex">{ex}</div>')
+            f'<div class="d">{escape(date_line)}</div><div class="h">{escape(hijri_line)}</div></div>'
+            f'<div class="r"><div class="ttl">{TITLE}</div>{badge}</div></div>'
+            f'<div class="row">{tiles}</div><div class="panel">{panel}</div>')
 
 
 STRIP_W, STRIP_H = 1200, 480
 
 
-def strip_html(prayers):
+def strip_html(prayers, theme="dark"):
     """A wide strip of just the five tiles (2.5:1), used as the item's thumbnail.
 
     Brief You's Triage shows thumbnails in a 150 dp tall, full-width frame, which would
     crop the 16:10 card; this strip fills that frame. The date is in the item's title.
     """
     tiles = "".join(
-        f'<div class="c"><div class="a">{ARABIC.get(name, "")}</div><div class="en">{escape(name)}</div>'
-        f'<div class="t num">{time}</div></div>'
-        for name, time, _note in prayers)
-    return (f'<!doctype html><meta charset="utf-8"><style>{_css()}'
+        f'<div class="c{" j" if name == JUMUAH or note else ""}"><div class="a">{ARABIC.get(name, "")}</div>'
+        f'<div class="en">{escape(name)}</div><div class="t num">{time}</div></div>'
+        for name, time, note in prayers)
+    return (f'<!doctype html><meta charset="utf-8"><style>{_css(theme)}'
             f'html,body{{width:{STRIP_W}px;height:{STRIP_H}px}}'
             f'.row{{left:56px;right:56px;top:24px;bottom:24px;gap:14px}}'
             f'.c{{height:auto}} .a{{font-size:54px}} .en{{font-size:26px}} .t{{font-size:70px;margin-top:4px}}'

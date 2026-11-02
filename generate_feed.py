@@ -13,6 +13,7 @@ month is fetched ahead, so a night's item never depends on the API being up.
 """
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -36,6 +37,7 @@ NEXT_DAY_FROM = 21 # from this hour (local time), the newest item is tomorrow
 # Hijri date; Pakistan follows Ruet-e-Hilal, which is usually a day behind (-1).
 # If the feed's Hijri date is ever a day off from Pakistan's, change this to 0 or -2.
 HIJRI_ADJUST = -1
+CARD_THEME = "dark"  # card and thumbnail colours: "dark" (for dark-mode readers) or "light"
 
 # Set automatically by the GitHub workflow; no need to edit.
 FEED_URL = os.environ.get("FEED_URL", "")
@@ -202,11 +204,105 @@ def prayer_list(day, data):
     ]
 
 
+def clock(total_minutes):
+    """Minutes after midnight -> 'HH:MM'."""
+    total_minutes %= 24 * 60
+    return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
+
+
+def extras_list(t):
+    """(label, value) for the extra times, in the order shown on the card and in the text.
+
+    Ishraq: 20 minutes after sunrise, once the disliked period after sunrise has passed.
+    Chasht (Duha): a quarter of the day (sunrise to sunset) after sunrise.
+    Zawal: the Hanafi disliked time before Dhuhr, from the midpoint between Fajr and
+    Maghrib (dahwa kubra) until Dhuhr begins.
+    """
+    sunrise, sunset = minutes(t["Sunrise"]), minutes(t["Sunset"])
+    length = (sunset - sunrise) % (24 * 60)
+    zawal_from = (minutes(t["Fajr"]) + minutes(t["Maghrib"])) // 2
+    return [
+        ("Sunrise", hm(t["Sunrise"])),
+        ("Ishraq", clock(sunrise + 20)),
+        ("Chasht", clock(sunrise + length // 4)),
+        ("Zawal", f"{clock(zawal_from)}–{hm(t['Dhuhr'])}"),
+        ("Sunset", hm(t["Sunset"])),
+        ("Midnight", hm(t["Midnight"])),
+        ("Tahajjud", hm(t["Lastthird"])),
+        ("Day length", f"{length // 60}h {length % 60:02d}m"),
+    ]
+
+
+# A collapsed explanation at the end of each item: one tappable line, closed by default.
+ABOUT_TIMES = (
+    "<details><summary><i>About these times</i></summary><ul>"
+    "<li><b>Sunrise</b>: Fajr ends. Don't start a prayer for about 15–20 minutes after it.</li>"
+    "<li><b>Ishraq</b>: voluntary prayer once the sun has fully risen (20 minutes after sunrise).</li>"
+    "<li><b>Chasht</b> (Duha): mid-morning voluntary prayer; can be prayed from Ishraq until "
+    "Zawal, preferred after a quarter of the day (the time shown).</li>"
+    "<li><b>Zawal</b>: around midday, praying is disliked (Hanafi: from the midpoint of Fajr "
+    "and Maghrib until Dhuhr).</li>"
+    "<li><b>Sunset</b>: Maghrib begins.</li>"
+    "<li><b>Midnight</b>: halfway between sunset and sunrise; the preferred limit for Isha.</li>"
+    "<li><b>Tahajjud</b>: the last third of the night begins, the best time for the night "
+    "prayer and du'a.</li>"
+    "<li><b>Day length</b>: sunrise to sunset.</li>"
+    "</ul><p><small>Karachi method (18°/18°), Hanafi Asr; beginning times without safety "
+    "margins.</small></p></details>"
+)
+
+
+def occasions(day, h, t=None):
+    """Notes for special days: (emoji, short label for the card, sentence for the text).
+
+    The first entry is the main one (shown on the card). Islamic nights begin at sunset,
+    so a night is noted on the day whose evening it starts. Follows the feed's Hijri date
+    (HIJRI_ADJUST). t (the day's timings) adds the Eid prayer window to the Eid notes."""
+    month, d = int(h["month"]["number"]), int(h["day"])
+    eid_window = ""
+    if t is not None:
+        # Eid salah: from when the sun has fully risen (Ishraq) until Zawal begins.
+        ex = dict(extras_list(t))
+        eid_window = f" Eid prayer from {ex['Ishraq']} until {ex['Zawal'].split('–')[0]}."
+    notes = {
+        (1, 1): ("🗓️", "Islamic New Year", "1 Muharram: the Islamic New Year."),
+        (1, 9): ("🤲", "Tasu'a", "9 Muharram: the day before Ashura (sunnah to fast with Ashura)."),
+        (1, 10): ("🤲", "Ashura", "10 Muharram: the Day of Ashura."),
+        (3, 12): ("🕌", "12 Rabi-ul-Awwal", "12 Rabi-ul-Awwal: Eid Milad-un-Nabi, a public holiday in Pakistan."),
+        (7, 26): ("✨", "Shab-e-Miraj tonight", "Shab-e-Miraj begins this evening (night of 27 Rajab)."),
+        (8, 14): ("✨", "Shab-e-Barat tonight", "Shab-e-Barat begins this evening (night of 15 Shaban)."),
+        (9, 1): ("🏮", "Ramadan begins", "1 Ramadan: Ramadan Mubarak."),
+        (9, 26): ("✨", "Shab-e-Qadr tonight", "Shab-e-Qadr: the 27th night of Ramadan begins this "
+                                                "evening, widely observed as Laylat al-Qadr."),
+        (10, 1): ("🎉", "Eid ul-Fitr", f"1 Shawwal: Eid ul-Fitr. Eid Mubarak!{eid_window}"),
+        (12, 9): ("🕋", "Day of Arafah", "9 Dhul Hijjah: the Day of Arafah (sunnah to fast)."),
+        (12, 10): ("🐑", "Eid ul-Adha", f"10 Dhul Hijjah: Eid ul-Adha. Eid Mubarak!{eid_window}"),
+    }
+    out = []
+    if (month, d) in notes:
+        out.append(notes[(month, d)])
+    if month == 9 and d in (20, 22, 24, 28):
+        out.append(("✨", "Odd night tonight", f"An odd night of the last ten begins this evening "
+                                                f"(night of {d + 1} Ramadan): seek Laylat al-Qadr."))
+    if month == 12 and d in (11, 12, 13):
+        out.append(("🚫", "Days of Tashreeq", f"{d} Dhul Hijjah: one of the Days of Tashreeq; "
+                                              f"fasting is not permitted."))
+    if month == 12 and 9 <= d <= 13:
+        out.append(("📿", "Takbeer-e-Tashreeq", "Takbeer-e-Tashreeq after every fard prayer, from "
+                                                "Fajr on 9 to Asr on 13 Dhul Hijjah."))
+    if d in (13, 14, 15) and month != 9 and (month, d) != (12, 13):
+        out.append(("🤲", "White day fast", f"{d} {HIJRI_MONTHS[month - 1]}: one of the white days "
+                                            f"(Ayyam al-Beed), sunnah to fast."))
+    if day.weekday() == 4:
+        out.append(("📖", "Jumu'ah", "Jumu'ah: sunnah to recite Surah Al-Kahf today."))
+    return out
+
+
 def strip_for(day, data):
     """The HTML for this day's thumbnail strip (see card.py)."""
     import card
 
-    return card.strip_html(prayer_list(day, data))
+    return card.strip_html(prayer_list(day, data), CARD_THEME)
 
 
 def card_for(day, data):
@@ -217,12 +313,14 @@ def card_for(day, data):
     h = data["date"]["hijri"]
     month_no = int(h["month"]["number"])
     prayers = prayer_list(day, data)
-    length = (minutes(t["Sunset"]) - minutes(t["Sunrise"])) % (24 * 60)
-    extras = [("Sunrise", hm(t["Sunrise"])), ("Sunset", hm(t["Sunset"])),
-              ("Midnight", hm(t["Midnight"])), ("Tahajjud", hm(t["Lastthird"])),
-              ("Day", f"{length // 60}h {length % 60:02d}m")]
+    extras = [("Day" if k == "Day length" else k, v) for k, v in extras_list(t)]
     hijri = f'{int(h["day"])} {HIJRI_MONTHS[month_no - 1]} {h["year"]} AH'
-    return card.card_html(CITY, f"{day:%A}, {day.day} {day:%B %Y}", hijri, prayers, extras)
+    # Special-day label above the date: the main one only, so it fits on one line (the
+    # text lists them all; Fridays already show Jumu'ah on the Dhuhr tile).
+    occasion = next((short for _, short, _ in occasions(day, h, t) if short != "Jumu'ah"), "")
+    # Short date on the card ("Wed, 30 Sep 2026"); the text below gives it in full.
+    return card.card_html(CITY, f"{day:%a}, {day.day} {day:%b %Y}", hijri, prayers, extras,
+                          occasion, CARD_THEME)
 
 
 def build_item(day, data, tz, card_url=None, strip_url=None):
@@ -241,14 +339,7 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
         row("Maghrib", hm(t["Maghrib"]), "Iftar" if ramadan else ""),
         row("Isha", hm(t["Isha"])),
     ]
-    length = (minutes(t["Sunset"]) - minutes(t["Sunrise"])) % (24 * 60)
-    extras = [
-        row("Sunrise", hm(t["Sunrise"]), dim=True),
-        row("Sunset", hm(t["Sunset"]), dim=True),
-        row("Midnight", hm(t["Midnight"]), dim=True),
-        row("Tahajjud", hm(t["Lastthird"]), dim=True),
-        row("Day length", f"{length // 60}h {length % 60:02d}m", dim=True),
-    ]
+    extras = [row(k, v, dim=True) for k, v in extras_list(t)]
     heading = f"{day:%A}, {day.day} {day:%B %Y}"
     if friday:
         heading += " · Jumu'ah"
@@ -266,20 +357,23 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
     moon_note = ""
     if int(h["day"]) == 29:
         next_month = HIJRI_MONTHS[month_no % 12]
-        moon_note = (f"Ruet-e-Hilal meets this evening for the {next_month} moon. "
-                     f"If tomorrow's Hijri date here doesn't match their announcement, "
-                     f"change HIJRI_ADJUST in generate_feed.py.")
-    note_html = f"<p><i>🌙 {escape(moon_note)}</i></p>" if moon_note else ""
+        moon_note = (f"{next_month} moon sighting tonight. If tomorrow's Hijri date "
+                     f"is off, change HIJRI_ADJUST.")
+    note_html = f"<p><small><i>🌙 {escape(moon_note)}</i></small></p>" if moon_note else ""
+    special = occasions(day, h, t)
+    note_html += "".join(f"<p>{icon} {escape(sentence)}</p>" for icon, _, sentence in special)
     html = (f"{img}<p><b>{heading}</b><br>{hijri}{' · Ramadan Mubarak' if ramadan else ''}</p>"
             f"{note_html}<hr><table>{''.join(prayers)}"
             f'<tr><td colspan="2"><hr></td></tr>'
-            f"{''.join(extras)}</table>")
+            f"{''.join(extras)}</table>{ABOUT_TIMES}")
 
     title = f'{day.day} {day:%b} · {int(h["day"])} {hijri_month}'
     # Each day's item is "published" the evening before, when it first appears.
     eve = day - timedelta(days=1)
     pub = datetime(eve.year, eve.month, eve.day, NEXT_DAY_FROM, tzinfo=tz)
-    guid = f"namaz-{CITY.lower().replace(' ', '-')}-{day.isoformat()}"
+    # Letters, digits and dashes only, so any city name gives a valid, stable ID.
+    slug = re.sub(r"[^a-z0-9]+", "-", CITY.lower()).strip("-")
+    guid = f"namaz-{slug}-{day.isoformat()}"
     link = f"{FEED_URL}#{day.isoformat()}" if FEED_URL else ""
     link_tag = f"\n      <link>{escape(link)}</link>" if link else ""
     # A short, readable summary for list and Triage views (they show <description> as
@@ -287,6 +381,8 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
     summary = " · ".join(f"{n} {tm}" for n, tm, _ in prayer_list(day, data))
     summary += (f" — Sunrise {hm(t['Sunrise'])} · Sunset {hm(t['Sunset'])} · "
                 f"Tahajjud {hm(t['Lastthird'])}")
+    if special:
+        summary = " · ".join(f"{icon} {short}" for icon, short, _ in special) + f" — {summary}"
     if moon_note:
         summary = f"🌙 Moon-sighting evening: check tomorrow's Hijri date. {summary}"
     thumb = (f'\n      <media:thumbnail url="{escape(strip_url)}" width="1200" height="480"/>'
@@ -369,14 +465,17 @@ def main():
     feed = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"
      xmlns:content="http://purl.org/rss/1.0/modules/content/"
-     xmlns:media="http://search.yahoo.com/mrss/">
+     xmlns:media="http://search.yahoo.com/mrss/"
+     xmlns:sy="http://purl.org/rss/1.0/modules/syndication/">
   <channel>
     <title>{escape(FEED_TITLE)}</title>
     <link>{escape(SITE_URL or "https://aladhan.com")}</link>
     <description>{escape(desc)}</description>
     <language>en</language>
     <lastBuildDate>{now}</lastBuildDate>
-    <ttl>720</ttl>{self_link}{image}
+    <ttl>720</ttl>
+    <sy:updatePeriod>daily</sy:updatePeriod>
+    <sy:updateFrequency>1</sy:updateFrequency>{self_link}{image}
 {chr(10).join(items)}
   </channel>
 </rss>
