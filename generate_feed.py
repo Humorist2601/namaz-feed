@@ -179,21 +179,33 @@ def minutes(value):
 
 
 def row(label, time, note="", dim=False):
+    # Values longer than a clock time (Zawal's range, Day length) take no width in the
+    # grid, so the columns, and the centring, follow the normal times; they just run on
+    # to the right.
+    hang = "" if re.fullmatch(r"\d\d:\d\d", time) else "width:0;"
     text = f"{label} <small>({note})</small>" if note else label
     if dim:
         text, time = f"<i>{text}</i>", f"<i>{time}</i>"
     else:
         text = f"<b>{text}</b>"
-    # Names and times form two fixed-width columns, centred on the page as one group, so
-    # every line lines up. Plain divs rather than a table, because readers restyle tables
-    # (Brief You indents them and turns rows into blocks). Without styles: "Fajr 05:23".
-    return (f'<div style="display:flex;justify-content:center;padding:2px 0">'
-            f'<span style="flex:0 1 {NAME_COL}">{text}</span> '
-            f'<span style="flex:0 0 {TIME_COL};white-space:nowrap;font-variant-numeric:tabular-nums">'
+    # One line of the timings grid (see timings_grid): the row is display:contents, so its
+    # name and time become the grid's cells. Without styles it reads "Fajr 05:23".
+    return (f'<div style="display:contents"><span style="grid-column:2;padding-right:2.5em">{text}</span> '
+            f'<span style="grid-column:3;{hang}white-space:nowrap;font-variant-numeric:tabular-nums">'
             f'{time}</span></div>')
 
 
-NAME_COL, TIME_COL = "7.5em", "5.5em"  # fit "Fajr (Sehri ends)" and "11:35–12:16"
+def timings_grid(prayers, extras):
+    """The prayers and the extra times in one grid: two columns in the middle of the page
+    (sized to the widest name and time across both sections, so the two sections line up
+    with each other and with themselves), with equal space either side to centre them, and
+    a full-width divider between the sections. Plain divs rather than a table, because
+    readers restyle tables (Brief You indents them and turns their rows into blocks)."""
+    divider = '<hr style="grid-column:1 / -1;width:100%">'
+    # The right side always keeps room for the longer values to run into (Zawal's range):
+    # with space to spare both sides are equal; when tight, the block shifts left to fit.
+    return (f'<div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto minmax(3.3em,1fr);'
+            f'row-gap:2px">{"".join(prayers)}{divider}{"".join(extras)}</div>')
 
 
 def prayer_list(day, data):
@@ -369,8 +381,7 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
     special = occasions(day, h, t)
     note_html += "".join(f"<p>{icon} {escape(sentence)}</p>" for icon, _, sentence in special)
     html = (f"{img}<p><b>{heading}</b><br>{hijri}{' · Ramadan Mubarak' if ramadan else ''}</p>"
-            f"{note_html}<hr><div>{''.join(prayers)}</div>"
-            f"<hr><div>{''.join(extras)}</div>"
+            f"{note_html}<hr>{timings_grid(prayers, extras)}"
             f"<hr>{ABOUT_TIMES}")
 
     title = f'{day.day} {day:%b} · {int(h["day"])} {hijri_month}'
