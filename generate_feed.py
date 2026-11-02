@@ -41,7 +41,6 @@ FEED_TITLE = f"Namaz Timings ({CITY})"
 SITE_URL = FEED_URL.rsplit("/", 1)[0] + "/" if FEED_URL else ""
 HERE = os.path.dirname(os.path.abspath(__file__))
 ICON_PNG = os.path.join(HERE, "assets", "icon.png")
-ICON_SVG = os.path.join(HERE, "assets", "icon.svg")
 API = "https://api.aladhan.com/v1/timingsByCity/{date}?{query}"
 
 
@@ -74,7 +73,9 @@ def row(label, time, note="", dim=False):
         text, time = f"<i>{text}</i>", f"<i>{time}</i>"
     else:
         text = f"<b>{text}</b>"
-    return (f'<tr><td style="padding:2px 24px 2px 0">{text}</td>'
+    # Fixed name-column width: some readers (Brief You) make each table row its own block,
+    # so without it the times don't line up in a column.
+    return (f'<tr><td style="padding:2px 24px 2px 0;width:7em;min-width:7em">{text}</td>'
             f'<td align="right" style="padding:2px 0;font-variant-numeric:tabular-nums">{time}</td></tr>')
 
 
@@ -235,14 +236,11 @@ def main():
     if os.path.exists(ICON_PNG):
         shutil.copy(ICON_PNG, os.path.join(out_dir, "icon.png"))
         shutil.copy(ICON_PNG, os.path.join(out_dir, "apple-touch-icon.png"))
-    if os.path.exists(ICON_SVG):
-        shutil.copy(ICON_SVG, os.path.join(out_dir, "favicon.svg"))
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{escape(FEED_TITLE)}</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="alternate" type="application/rss+xml" title="{escape(FEED_TITLE)}" href="feed.xml">

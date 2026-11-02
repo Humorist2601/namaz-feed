@@ -31,20 +31,20 @@ def _css():
 html,body{{width:{W}px;height:{H}px;overflow:hidden;background:transparent}}
 body{{position:relative;font-family:Outfit,sans-serif;color:{FG};-webkit-font-smoothing:antialiased}}
 .num{{font-variant-numeric:tabular-nums}}
-.head{{position:absolute;left:64px;right:64px;top:50px;display:flex;justify-content:space-between;align-items:flex-start}}
-.k{{font-size:24px;letter-spacing:.32em;color:{MUTED};font-weight:500;text-transform:uppercase}}
+.head{{position:absolute;left:64px;right:64px;top:40px;display:flex;justify-content:space-between;align-items:flex-start}}
+.k{{font-size:29px;letter-spacing:.28em;color:{MUTED};font-weight:500;text-transform:uppercase}}
 .d{{font-size:58px;font-weight:300;margin-top:8px;letter-spacing:-.01em;white-space:nowrap}}
-.ttl{{font-family:Amiri;direction:rtl;font-size:52px;color:{GOLD};font-weight:700;text-align:right;line-height:1.35}}
-.h{{font-family:Cormorant;font-style:italic;font-size:32px;color:{MUTED};text-align:right;margin-top:2px;white-space:nowrap}}
-.row{{position:absolute;left:64px;right:64px;top:290px;display:flex;gap:18px}}
-.c{{flex:1;height:340px;border-radius:40px;background:rgba(255,255,255,.055);border:2px solid rgba(255,255,255,.10);
+.ttl{{font-family:Amiri;direction:rtl;font-size:58px;color:{GOLD};font-weight:700;text-align:right;line-height:1.35}}
+.h{{font-family:Cormorant;font-style:italic;font-size:38px;color:{MUTED};text-align:right;margin-top:2px;white-space:nowrap}}
+.row{{position:absolute;left:64px;right:64px;top:250px;display:flex;gap:16px}}
+.c{{flex:1;height:390px;border-radius:40px;background:rgba(255,255,255,.055);border:2px solid rgba(255,255,255,.10);
    display:flex;flex-direction:column;align-items:center;justify-content:center}}
-.a{{font-family:Amiri;direction:rtl;font-size:46px;color:{GOLD};font-weight:700;line-height:1.3}}
-.en{{font-size:24px;letter-spacing:.2em;text-transform:uppercase;color:{MUTED};margin-top:4px;white-space:nowrap}}
-.t{{font-size:66px;font-weight:300;margin-top:8px}}
-.note{{font-size:21px;letter-spacing:.12em;text-transform:uppercase;color:{GOLD};margin-top:6px;opacity:.9}}
-.ex{{position:absolute;left:64px;right:64px;bottom:44px;display:flex;justify-content:space-between;font-size:27px;color:{MUTED}}}
-.ex i{{font-style:normal;letter-spacing:.06em}}
+.a{{font-family:Amiri;direction:rtl;font-size:54px;color:{GOLD};font-weight:700;line-height:1.3}}
+.en{{font-size:28px;letter-spacing:.14em;text-transform:uppercase;color:{MUTED};margin-top:4px;white-space:nowrap}}
+.t{{font-size:74px;font-weight:400;margin-top:6px;letter-spacing:-.02em}}
+.note{{font-size:25px;letter-spacing:.12em;text-transform:uppercase;color:{GOLD};margin-top:6px;opacity:.9}}
+.ex{{position:absolute;left:64px;right:64px;bottom:36px;display:flex;justify-content:space-between;font-size:32px;color:{MUTED}}}
+.ex i{{font-style:normal;letter-spacing:.02em}}
 .ex b{{color:{FG};font-weight:500;margin-left:6px}}
 """
 

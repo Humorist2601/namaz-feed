@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/icon.png" width="128" alt="Namaz Timings icon"></p>
+
 # Namaz Timings RSS
 
 A daily RSS feed of prayer times for a city of your choice, from the free Aladhan API.
