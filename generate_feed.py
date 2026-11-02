@@ -184,10 +184,16 @@ def row(label, time, note="", dim=False):
         text, time = f"<i>{text}</i>", f"<i>{time}</i>"
     else:
         text = f"<b>{text}</b>"
-    # Fixed name-column width: some readers (Brief You) make each table row its own block,
-    # so without it the times don't line up in a column.
-    return (f'<tr><td style="padding:2px 24px 2px 0;width:7em;min-width:7em">{text}</td>'
-            f'<td align="right" style="padding:2px 0;font-variant-numeric:tabular-nums">{time}</td></tr>')
+    # Names and times form two fixed-width columns, centred on the page as one group, so
+    # every line lines up. Plain divs rather than a table, because readers restyle tables
+    # (Brief You indents them and turns rows into blocks). Without styles: "Fajr 05:23".
+    return (f'<div style="display:flex;justify-content:center;padding:2px 0">'
+            f'<span style="flex:0 1 {NAME_COL}">{text}</span> '
+            f'<span style="flex:0 0 {TIME_COL};white-space:nowrap;font-variant-numeric:tabular-nums">'
+            f'{time}</span></div>')
+
+
+NAME_COL, TIME_COL = "7.5em", "5.5em"  # fit "Fajr (Sehri ends)" and "11:35–12:16"
 
 
 def prayer_list(day, data):
@@ -363,9 +369,9 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
     special = occasions(day, h, t)
     note_html += "".join(f"<p>{icon} {escape(sentence)}</p>" for icon, _, sentence in special)
     html = (f"{img}<p><b>{heading}</b><br>{hijri}{' · Ramadan Mubarak' if ramadan else ''}</p>"
-            f"{note_html}<hr><table>{''.join(prayers)}"
-            f'<tr><td colspan="2"><hr></td></tr>'
-            f"{''.join(extras)}</table>{ABOUT_TIMES}")
+            f"{note_html}<hr><div>{''.join(prayers)}</div>"
+            f"<hr><div>{''.join(extras)}</div>"
+            f"<hr>{ABOUT_TIMES}")
 
     title = f'{day.day} {day:%b} · {int(h["day"])} {hijri_month}'
     # Each day's item is "published" the evening before, when it first appears.

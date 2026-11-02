@@ -1,102 +1,134 @@
-<p align="center"><img src="assets/icon.png" width="128" alt="Namaz Timings icon"></p>
+<p align="center"><img src="assets/icon.png" width="112" alt="Namaz Timings icon"></p>
 
-# Namaz Timings RSS
+<h1 align="center">Namaz Timings RSS</h1>
 
+<p align="center">A daily RSS feed of prayer times for your city, delivered the evening before.<br>
+Runs itself on GitHub for free; no server, no app, nothing to maintain.</p>
+
+<p align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme-card-dark.png">
-  <img src="assets/readme-card-light.png" alt="Example card: Friday's prayer times in glass tiles with Arabic and English names, and the extra times below" width="640">
+  <img src="assets/readme-card-light.png" alt="Example card: Friday's prayer times in glass tiles with Arabic and English names, and the extra times in a panel below" width="640">
 </picture>
+</p>
 
-A daily RSS feed of prayer times for a city of your choice, from the free Aladhan API.
+## What you get
 
-Each day gets one feed item titled like `2 Nov · 22 Jumada al-Ula`. It opens with a
-**card image**: a transparent 1280×800 PNG (English and Arabic prayer names in glass
-tiles, the extra times in a panel below, Zawal in amber, Jumu'ah tinted gold on Fridays)
-with no background of its own, so it blends into the reader. Set `CARD_THEME` to `"dark"`
-(light text, for dark-mode readers) or `"light"` (dark text, for light-mode readers). Readers that
-show an item's first picture as a header (like Brief You) display it at the top.
-The cards are drawn by `card.py` with headless Chromium, using the open-licence fonts
-in `assets/fonts`. If drawing ever fails, the feed still goes out with text only.
-Each item also carries a wide strip of just the five times as its thumbnail
-(`media:thumbnail`), sized for list and Triage views, and a one-line summary as its
-`<description>`; the full article is in `<content:encoded>`.
+Every evening at 21:00 a new item arrives with **tomorrow's** timings, titled like
+`3 Nov · 22 Jumada al-Ula`.
 
-Below the card, the same information as text:
+**The card.** Each item opens with an image of the day: the five prayers in glass tiles
+with their Arabic names, and the extra times in a panel below. It has no background of
+its own, so it blends into your reader. Readers that show an item's first picture as a
+header (like Brief You) put it at the top.
 
-- the full Gregorian and Hijri dates (marked Jumu'ah on Fridays)
-- Fajr, Dhuhr (Jumu'ah on Fridays), Asr, Maghrib, Isha
-- extras: Sunrise, Ishraq (20 min after sunrise), Chasht (a quarter of the day after
-  sunrise), Zawal (the Hanafi disliked time: midpoint of Fajr and Maghrib until Dhuhr),
-  Sunset, Islamic midnight, Tahajjud and day length
-- notes on special days: Islamic New Year, Ashura, 12 Rabi-ul-Awwal, Shab-e-Miraj,
-  Shab-e-Barat, Ramadan, Shab-e-Qadr and the other odd nights, both Eids (with the Eid
-  prayer window), Arafah, Takbeer-e-Tashreeq (9–13 Dhul Hijjah), the Days of Tashreeq when
-  fasting isn't permitted, the white days (13–15), and a Surah Al-Kahf reminder on Fridays
-  (shown on the card and in the text)
-- Sehri / Iftar labels during Ramadan
+- Jumu'ah is tinted gold on Fridays; in Ramadan, Fajr (Sehri ends) and Maghrib (Iftar) are.
+- Zawal, the time to avoid praying, is in amber.
+- Special days get a gold badge under the Arabic title.
 
-All times are 24-hour. The feed keeps the last 7 days.
+**The text.** Below the card, the same information as text you can read and copy:
+the full Gregorian and Hijri dates, the five prayers, then the extra times, in two
+aligned columns centred on the page. A collapsible *About these times*
+explains each one.
+
+| Prayers | Extra times |
+|---|---|
+| Fajr, Dhuhr (Jumu'ah on Fridays), Asr, Maghrib, Isha | Sunrise, Ishraq, Chasht, Zawal, Sunset, Midnight, Tahajjud, Day length |
+
+**List and Triage views.** A wide strip of the five times as the thumbnail, and a
+one-line summary: `Fajr 05:26 · Dhuhr 12:16 · … — Sunrise 06:47 · Sunset 17:43 · Tahajjud 02:26`.
+
+**Special days.** A note in the text and the summary, and a badge on the card:
+
+- 🗓️ Islamic New Year · 🤲 Tasu'a and Ashura · 🕌 12 Rabi-ul-Awwal
+- ✨ Shab-e-Miraj · Shab-e-Barat · Shab-e-Qadr and the other odd nights of Ramadan
+- 🏮 Ramadan begins · 🎉 Eid ul-Fitr · 🐑 Eid ul-Adha (both Eids with the Eid prayer window)
+- 🕋 Day of Arafah · 📿 Takbeer-e-Tashreeq (9–13 Dhul Hijjah) · 🚫 Days of Tashreeq: no fasting
+- 🤲 White days (13th–15th): sunnah fast · 📖 Fridays: Surah Al-Kahf
+- 🌙 29th of each month: moon-sighting reminder
+
+Nights such as Shab-e-Barat are noted on the day whose evening they begin. All times
+are 24-hour; the feed keeps the last 7 days.
 
 ## Setup (about 5 minutes)
 
-1. Create a new **public** GitHub repo, e.g. `namaz-feed`, and add these files.
-2. Set your city in `generate_feed.py` (next section).
-3. In the repo go to **Settings → Pages** and set **Source** to **GitHub Actions**.
+1. Create a **public** GitHub repo, e.g. `namaz-feed`, and add these files.
+2. Set your city at the top of `generate_feed.py` (see [Settings](#settings)).
+3. In the repo, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
 4. Go to **Actions → Update namaz feed → Run workflow** to build it the first time.
 5. Add this URL to your RSS reader:
 
-   `https://<your-github-username>.github.io/namaz-feed/feed.xml`
+   ```
+   https://<your-github-username>.github.io/namaz-feed/feed.xml
+   ```
 
-After that it rebuilds itself every evening at 21:00 Pakistan time and publishes
-**tomorrow's** timings, so you can see the next day's times the night before.
+Optionally, set `assets/icon.png` as the feed's icon in your reader.
 
-### Hijri dates
+## Settings
 
-The Hijri date is calculated, then shifted by `HIJRI_ADJUST` to match Pakistan's moon
-sighting (Ruet-e-Hilal is usually a day behind the calculation, hence `-1`). If you
-notice the feed's Hijri date is a day off, change it to `0` or `-2`.
+Everything is at the top of `generate_feed.py`. Committing a change rebuilds the feed
+straight away.
 
-To make that easy to notice, the item for the 29th of each Hijri month carries a 🌙 note:
-Ruet-e-Hilal meets that evening, so compare their announcement with the next day's
-Hijri date in the feed.
+| Setting | Default | What it does |
+|---|---|---|
+| `CITY` | `"Quetta"` | Any city Aladhan recognises. The feed is named `Namaz Timings (<City>)` |
+| `COUNTRY` | `"Pakistan"` | Country name or code, e.g. `"UK"` |
+| `TIMEZONE` | `""` | Leave empty to detect it from the city |
+| `METHOD` | `"1"` | Calculation method: 1 Karachi, 2 ISNA, 3 Muslim World League, 4 Umm al-Qura, 5 Egypt ([all IDs](https://api.aladhan.com/v1/methods)) |
+| `SCHOOL` | `"1"` | Asr: 1 = Hanafi, 0 = Shafi'i |
+| `DAYS` | `7` | How many recent days the feed keeps |
+| `NEXT_DAY_FROM` | `21` | From this hour (local time), the newest item is tomorrow |
+| `HIJRI_ADJUST` | `-1` | Days to shift the Hijri date to match local moon sighting (see below) |
+| `CARD_THEME` | `"dark"` | `"dark"` for dark-mode readers, `"light"` for light-mode readers |
 
-### Saved timings (`data/`)
+**Another time zone?** The evening run is set for 21:00 Pakistan time. Change the `cron`
+time in `.github/workflows/feed.yml` (it's in UTC) and `NEXT_DAY_FROM` to match.
 
-Prayer times are fixed by astronomy, so they're fetched a month at a time and saved
-in `data/YYYY-MM.json`; the nightly run reads those files and normally makes **no API
-call at all**. A month is fetched only when:
+## How it works
 
-- its file is missing (from the 20th, next month is fetched ahead, so a failure has
-  about 10 nights to be retried before it matters), or
-- you changed `CITY`, `COUNTRY`, `METHOD`, `SCHOOL` or `TIMEZONE` (each file records
-  what it was fetched with, so the next run refetches straight away).
+**Hijri date.** The Hijri date is calculated, then shifted by `HIJRI_ADJUST` to match
+Pakistan's Ruet-e-Hilal moon sighting, which is usually a day behind the calculation.
+On the 29th of each month the item carries a 🌙 note: compare the next day's Hijri date
+with the announcement, and if it's off, change `HIJRI_ADJUST` to `0` or `-2`. Special
+days follow this date, so it's the one thing worth checking.
 
-API requests are retried a few times if the server is briefly down. The run commits
-newly fetched files itself (that commit doesn't start another run) and deletes months
-the feed no longer needs, so `data/` stays at two or three small files.
-If your city is in another time zone, change the `cron` time in
-`.github/workflows/feed.yml` (it's in UTC) and `NEXT_DAY_FROM` in `generate_feed.py`.
+**Saved timings (`data/`).** Prayer times are fixed by astronomy, so they're fetched a
+month at a time and saved in `data/YYYY-MM.json`. The nightly run reads these files and
+normally makes no network calls at all. A month is fetched only when its file is missing
+(from the 20th, next month is fetched ahead, leaving about 10 nights to retry if the
+service is down) or when you change the city or method. The run saves new months
+itself and deletes ones it no longer needs.
 
-## Choosing the city and settings
+**Cards.** `card.py` draws each day's card and strip with headless Chromium, using the
+open-licence fonts in `assets/fonts`. If drawing ever fails, the feed still goes out
+with text only.
 
-Edit the settings at the top of `generate_feed.py`:
+**Staying on.** GitHub pauses scheduled jobs in repos without activity for 60 days; the
+workflow re-enables itself on every run. If the feed ever stops updating, open the
+Actions tab and re-enable the workflow.
 
-| Setting    | Example     | Notes                                                        |
-|------------|-------------|--------------------------------------------------------------|
-| `CITY`     | `"Lahore"`  | Any city Aladhan recognises                                  |
-| `COUNTRY`  | `"Pakistan"`| Country name or code, e.g. `"UK"`                            |
-| `TIMEZONE` | `""`        | Leave empty to detect it from the city                       |
-| `METHOD`   | `"1"`       | Calculation method: 1 Karachi, 2 ISNA, 3 Muslim World League, 4 Umm al-Qura, 5 Egypt (full list on aladhan.com) |
-| `SCHOOL`   | `"1"`       | Asr: 1 = Hanafi, 0 = Shafi'i                                  |
-| `DAYS`     | `7`         | How many recent days the feed keeps                          |
-| `NEXT_DAY_FROM` | `21`   | From this hour (local), the newest item is tomorrow          |
-| `HIJRI_ADJUST` | `-1`    | Days to shift the calculated Hijri date to match local moon sighting; change to `0` or `-2` if it's ever a day off |
-| `CARD_THEME` | `"dark"` | Card and thumbnail colours: `"dark"` for dark-mode readers, `"light"` for light-mode readers |
+## Accuracy
 
-Committing the change rebuilds the feed straight away.
-The feed's name follows the city: `Namaz Timings (<City>)`.
+Times come from the free [Aladhan API](https://aladhan.com) using the University of
+Islamic Sciences, Karachi method (Fajr and Isha at 18°) with Hanafi Asr: the standard
+for Pakistan. They're beginning times, without safety margins, and match Pakistani
+timetables such as Express Tribune and HamariWeb to the minute. Some sites, like
+IslamicFinder, add a precautionary minute or two (three for Maghrib).
 
-GitHub normally pauses scheduled jobs in repos with no activity for 60 days.
-The workflow re-enables itself on every run (and the monthly data commits count as
-activity too). If the feed ever stops updating anyway, open the Actions tab and
-re-enable the workflow.
+How the extra times are worked out:
+
+- **Ishraq**: 20 minutes after sunrise, once the disliked period has passed.
+- **Chasht**: a quarter of the day (sunrise to sunset) after sunrise.
+- **Zawal**: from the midpoint of Fajr and Maghrib until Dhuhr (Hanafi).
+- **Midnight**: halfway between sunset and sunrise.
+- **Tahajjud**: the start of the last third of the night.
+
+## Files
+
+| File | |
+|---|---|
+| `generate_feed.py` | Settings, timings, notes and the feed itself |
+| `card.py` | Draws the card and the thumbnail strip |
+| `.github/workflows/feed.yml` | The nightly run and deployment to GitHub Pages |
+| `data/` | Saved monthly timings (managed automatically) |
+| `assets/` | Icon, fonts (with their licences) and README images |
