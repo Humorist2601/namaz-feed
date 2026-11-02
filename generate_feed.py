@@ -7,6 +7,7 @@ Standard library only.
 """
 import json
 import os
+import shutil
 import sys
 import urllib.parse
 import urllib.request
@@ -26,6 +27,12 @@ FEED_URL = os.environ.get("FEED_URL", "")  # e.g. https://<user>.github.io/<repo
 OUT = os.environ.get("OUT", "public/feed.xml")
 
 PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"]
+HIJRI_MONTHS = ["Muharram", "Safar", "Rabi al-Awwal", "Rabi al-Thani",
+                "Jumada al-Ula", "Jumada al-Akhirah", "Rajab", "Shaban",
+                "Ramadan", "Shawwal", "Dhul Qadah", "Dhul Hijjah"]
+FEED_TITLE = f"Namaz Timings ({CITY})"
+SITE_URL = FEED_URL.rsplit("/", 1)[0] + "/" if FEED_URL else ""
+ICON_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.png")
 API = "https://api.aladhan.com/v1/timingsByCity/{date}?{query}"
 
 
@@ -43,29 +50,28 @@ def fetch_day(day):
     return payload["data"]
 
 
-def to_12h(hhmm):
-    hhmm = hhmm.split(" ")[0]  # drop any " (PKT)" suffix
-    return datetime.strptime(hhmm, "%H:%M").strftime("%-I:%M %p")
+def fmt_time(hhmm):
+    return hhmm.split(" ")[0]  # 24-hour HH:MM; drop any " (PKT)" suffix
 
 
 def build_item(day, data, tz):
     t = data["timings"]
     h = data["date"]["hijri"]
-    hijri = f'{h["day"]} {h["month"]["en"]} {h["year"]} AH'
-    date_str = day.strftime("%A, %d %B %Y")
+    hijri_month = HIJRI_MONTHS[int(h["month"]["number"]) - 1]
+    hijri = f'{int(h["day"])} {hijri_month} {h["year"]} AH'
 
+    title = f'{day.day} {day:%b} · {int(h["day"])} {hijri_month}'
     rows = "".join(
-        f"<tr><td><b>{p}</b></td><td>{to_12h(t[p])}</td></tr>" for p in PRAYERS
+        f"<tr><td><b>{p}</b></td><td>{fmt_time(t[p])}</td></tr>" for p in PRAYERS
     )
-    html = f"<p>{date_str} · {hijri}</p><table>{rows}</table>"
-    plain = " · ".join(f"{p} {to_12h(t[p])}" for p in PRAYERS)
+    html = f"<p>{day:%A}, {day.day} {day:%B %Y} · {hijri}</p><table>{rows}</table>"
 
     pub = datetime(day.year, day.month, day.day, tzinfo=tz)
     guid = f"namaz-{CITY.lower()}-{day.isoformat()}"
     link = FEED_URL + "#" + day.isoformat() if FEED_URL else ""
     return f"""    <item>
-      <title>{escape(f"Namaz timings – {CITY} – {date_str}")}</title>
-      <description><![CDATA[{html}<p>{plain}</p>]]></description>
+      <title>{escape(title)}</title>
+      <description><![CDATA[{html}]]></description>
       <pubDate>{format_datetime(pub)}</pubDate>
       <guid isPermaLink="false">{guid}</guid>{f'''
       <link>{escape(link)}</link>''' if link else ''}
@@ -88,22 +94,55 @@ def main():
     now = format_datetime(datetime.now(tz))
     self_link = (f'\n    <atom:link href="{escape(FEED_URL)}" rel="self" '
                  f'type="application/rss+xml"/>') if FEED_URL else ""
+    image = (f"""
+    <image>
+      <url>{escape(SITE_URL)}icon.png</url>
+      <title>{escape(FEED_TITLE)}</title>
+      <link>{escape(SITE_URL)}</link>
+      <width>144</width>
+      <height>144</height>
+    </image>""") if SITE_URL else ""
+    desc = f"Daily prayer times for {CITY}, {COUNTRY}"
+    if METHOD == "1" and SCHOOL == "1":
+        desc += " (Karachi method, Hanafi Asr)"
     feed = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>{escape(f"Namaz timings – {CITY}")}</title>
-    <link>{escape(FEED_URL or "https://aladhan.com")}</link>
-    <description>{escape(f"Daily prayer times for {CITY}, {COUNTRY} (Karachi method, Hanafi Asr)" if METHOD == "1" and SCHOOL == "1" else f"Daily prayer times for {CITY}, {COUNTRY}")}</description>
+    <title>{escape(FEED_TITLE)}</title>
+    <link>{escape(SITE_URL or "https://aladhan.com")}</link>
+    <description>{escape(desc)}</description>
     <language>en</language>
     <lastBuildDate>{now}</lastBuildDate>
-    <ttl>720</ttl>{self_link}
+    <ttl>720</ttl>{self_link}{image}
 {chr(10).join(items)}
   </channel>
 </rss>
 """
-    os.makedirs(os.path.dirname(OUT) or ".", exist_ok=True)
+    out_dir = os.path.dirname(OUT) or "."
+    os.makedirs(out_dir, exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:
         f.write(feed)
+
+    # Small home page + icons so readers that use the site favicon pick it up too
+    if os.path.exists(ICON_SRC):
+        shutil.copy(ICON_SRC, os.path.join(out_dir, "icon.png"))
+        shutil.copy(ICON_SRC, os.path.join(out_dir, "apple-touch-icon.png"))
+        svg = ICON_SRC[:-3] + "svg"
+        if os.path.exists(svg):
+            shutil.copy(svg, os.path.join(out_dir, "favicon.svg"))
+    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{escape(FEED_TITLE)}</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="alternate" type="application/rss+xml" title="{escape(FEED_TITLE)}" href="feed.xml">
+</head><body style="font-family:sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem">
+<h1>{escape(FEED_TITLE)}</h1><p>{escape(desc)}.</p>
+<p>Subscribe: <a href="feed.xml">feed.xml</a></p></body></html>
+""")
     print(f"wrote {OUT} with {len(items)} items")
 
 
