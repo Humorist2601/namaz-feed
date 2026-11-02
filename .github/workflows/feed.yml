@@ -2,7 +2,7 @@ name: Update namaz feed
 
 on:
   schedule:
-    - cron: "5 19 * * *"   # 19:05 UTC = 00:05 in Quetta (PKT), just after midnight
+    - cron: "0 16 * * *"   # 16:00 UTC = 21:00 in Pakistan (PKT, UTC+5)
   workflow_dispatch:        # lets you run it manually from the Actions tab
   push:
     branches: [main]
@@ -29,6 +29,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      # Headless Chromium draws each day's card image (card.py).
+      - name: Install card renderer
+        run: |
+          pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium
 
       - name: Generate feed
         env:
