@@ -10,6 +10,9 @@ tiles) with no background of its own, so it blends into a dark reader. Readers t
 show an item's first picture as a header (like Brief You) display it at the top.
 The cards are drawn by `card.py` with headless Chromium, using the open-licence fonts
 in `assets/fonts`. If drawing ever fails, the feed still goes out with text only.
+Each item also carries a wide strip of just the five times as its thumbnail
+(`media:thumbnail`), sized for list and Triage views, and a one-line summary as its
+`<description>`; the full article is in `<content:encoded>`.
 
 Below the card, the same information as text:
 
@@ -32,6 +35,27 @@ All times are 24-hour. The feed keeps the last 7 days.
 
 After that it rebuilds itself every evening at 21:00 Pakistan time and publishes
 **tomorrow's** timings, so you can see the next day's times the night before.
+
+### Hijri dates
+
+The Hijri date is calculated, then shifted by `HIJRI_ADJUST` to match Pakistan's moon
+sighting (Ruet-e-Hilal is usually a day behind the calculation, hence `-1`). If you
+notice the feed's Hijri date is a day off, change it to `0` or `-2`.
+
+### Saved timings (`data/`)
+
+Prayer times are fixed by astronomy, so they're fetched a month at a time and saved
+in `data/YYYY-MM.json`; the nightly run reads those files and normally makes **no API
+call at all**. A month is fetched only when:
+
+- its file is missing (from the 20th, next month is fetched ahead, so a failure has
+  about 10 nights to be retried before it matters), or
+- you changed `CITY`, `COUNTRY`, `METHOD`, `SCHOOL` or `TIMEZONE` (each file records
+  what it was fetched with, so the next run refetches straight away).
+
+API requests are retried a few times if the server is briefly down. The run commits
+newly fetched files itself (that commit doesn't start another run) and deletes months
+the feed no longer needs, so `data/` stays at two or three small files.
 If your city is in another time zone, change the `cron` time in
 `.github/workflows/feed.yml` (it's in UTC) and `NEXT_DAY_FROM` in `generate_feed.py`.
 
@@ -48,16 +72,12 @@ Edit the settings at the top of `generate_feed.py`:
 | `SCHOOL`   | `"1"`       | Asr: 1 = Hanafi, 0 = Shafi'i                                  |
 | `DAYS`     | `7`         | How many recent days the feed keeps                          |
 | `NEXT_DAY_FROM` | `21`   | From this hour (local), the newest item is tomorrow          |
+| `HIJRI_ADJUST` | `-1`    | Days to shift the calculated Hijri date to match local moon sighting; change to `0` or `-2` if it's ever a day off |
 
 Committing the change rebuilds the feed straight away.
 The feed's name follows the city: `Namaz Timings (<City>)`.
 
 GitHub normally pauses scheduled jobs in repos with no activity for 60 days.
-The workflow re-enables itself on every run to prevent that. If the feed
-ever stops updating anyway, open the Actions tab and re-enable the workflow.
-
-## Offline calendar file
-
-`make_ics.py` builds a standalone `.ics` file (Fajr, Sunrise, Dhuhr, Asr, Sunset,
-Maghrib, Isha) for importing into an offline calendar. Edit the settings at the
-top and run `python make_ics.py namaz.ics`.
+The workflow re-enables itself on every run (and the monthly data commits count as
+activity too). If the feed ever stops updating anyway, open the Actions tab and
+re-enable the workflow.

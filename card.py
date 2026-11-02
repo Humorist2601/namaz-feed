@@ -65,8 +65,41 @@ def card_html(city, date_line, hijri_line, prayers, extras):
             f'<div class="row">{tiles}</div><div class="ex">{ex}</div>')
 
 
+STRIP_W, STRIP_H = 1200, 480
+
+
+def strip_html(prayers):
+    """A wide strip of just the five tiles (2.5:1), used as the item's thumbnail.
+
+    Brief You's Triage shows thumbnails in a 150 dp tall, full-width frame, which would
+    crop the 16:10 card; this strip fills that frame. The date is in the item's title.
+    """
+    tiles = "".join(
+        f'<div class="c"><div class="a">{ARABIC.get(name, "")}</div><div class="en">{escape(name)}</div>'
+        f'<div class="t num">{time}</div></div>'
+        for name, time, _note in prayers)
+    return (f'<!doctype html><meta charset="utf-8"><style>{_css()}'
+            f'html,body{{width:{STRIP_W}px;height:{STRIP_H}px}}'
+            f'.row{{left:56px;right:56px;top:24px;bottom:24px;gap:14px}}'
+            f'.c{{height:auto}} .a{{font-size:54px}} .en{{font-size:26px}} .t{{font-size:70px;margin-top:4px}}'
+            f'</style><div class="row">{tiles}</div>')
+
+
+def _shrink(path):
+    """Re-save as a 256-colour PNG with transparency: about a third of the size, same look."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return  # Pillow missing: keep the full-colour PNG
+    im = Image.open(path).convert("RGBA")
+    small = im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
+    small.save(path, optimize=True)
+
+
 def render_cards(cards, out_dir):
-    """cards: list of (filename, html). Writes transparent PNGs into out_dir; returns the names written."""
+    """cards: list of (filename, html) or (filename, html, (width, height)).
+
+    Writes transparent PNGs into out_dir; returns the names written."""
     import tempfile
     from playwright.sync_api import sync_playwright
 
@@ -75,12 +108,17 @@ def render_cards(cards, out_dir):
     with tempfile.TemporaryDirectory() as tmp, sync_playwright() as pw:
         browser = pw.chromium.launch()
         page = browser.new_page(viewport={"width": W, "height": H})
-        for name, html in cards:
+        for job in cards:
+            name, html = job[0], job[1]
+            w, h = job[2] if len(job) > 2 else (W, H)
+            page.set_viewport_size({"width": w, "height": h})
             src = Path(tmp) / "card.html"  # a file page, so it may load the local fonts
             src.write_text(html, encoding="utf-8")
             page.goto(src.as_uri(), wait_until="load")
             page.evaluate("document.fonts.ready")
-            page.screenshot(path=os.path.join(out_dir, name), omit_background=True)
+            path = os.path.join(out_dir, name)
+            page.screenshot(path=path, omit_background=True)
+            _shrink(path)
             written.append(name)
         browser.close()
     return written

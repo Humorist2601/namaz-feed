@@ -2,13 +2,13 @@ name: Update namaz feed
 
 on:
   schedule:
-    - cron: "0 16 * * *"   # 16:00 UTC = 21:00 in Pakistan (PKT, UTC+5)
+    - cron: "0 16 * * *"   # 16:00 UTC = 21:00 in Pakistan (PKT, UTC+5): publishes tomorrow
   workflow_dispatch:        # lets you run it manually from the Actions tab
   push:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write  # lets the run save newly fetched timings in data/
   pages: write
   id-token: write
   actions: write   # lets the keep-alive step stop GitHub pausing this schedule
@@ -30,16 +30,31 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Headless Chromium draws each day's card image (card.py).
+      # Headless Chromium draws each day's card image (card.py); Pillow compresses them.
       - name: Install card renderer
         run: |
-          pip install playwright==1.63.0
+          pip install playwright==1.63.0 pillow
           python -m playwright install --with-deps chromium
 
       - name: Generate feed
         env:
           FEED_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/feed.xml
         run: python generate_feed.py
+
+      # Save any month of timings fetched this run, so later runs read it instead of the API.
+      # Commits made with the workflow's token don't start another run.
+      - name: Save fetched timings
+        run: |
+          git add -A data
+          if git diff --cached --quiet; then
+            echo "No new timings to save."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Save prayer timings data"
+          git pull --rebase origin main && git push origin HEAD:main \
+            || echo "::warning::Couldn't save timings; the next run will fetch them again."
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
@@ -49,7 +64,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
       # GitHub pauses scheduled workflows after 60 days without repo activity.
-      # This re-enables the workflow via the API, resetting that timer (no commits made).
+      # This re-enables the workflow via the API, resetting that timer.
       - name: Keep schedule alive
         if: github.event_name == 'schedule'
         env:
