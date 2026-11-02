@@ -27,8 +27,8 @@ header (like Brief You) put it at the top.
 - Special days get a gold badge under the Arabic title.
 
 **The text.** Below the card, the same information as text you can read and copy:
-the full Gregorian and Hijri dates, then the five prayers and the extra times in two
-centred columns, all lined up with each other whatever your reader's font. A collapsible *About these times*
+the full Gregorian and Hijri dates, then the five prayers and the extra times with their
+Arabic names, each time in a soft rounded chip on the right. A collapsible *About these times*
 explains each one.
 
 | Prayers | Extra times |

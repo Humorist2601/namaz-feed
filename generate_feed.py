@@ -178,34 +178,45 @@ def minutes(value):
     return int(h) * 60 + int(m)
 
 
+ARABIC_NAMES = {
+    "Fajr": "الفجر", "Dhuhr": "الظهر", "Jumu'ah": "الجمعة", "Asr": "العصر", "Maghrib": "المغرب",
+    "Isha": "العشاء", "Sunrise": "الشروق", "Ishraq": "الإشراق", "Chasht": "الضحى", "Zawal": "الزوال",
+    "Sunset": "الغروب", "Midnight": "نصف الليل", "Tahajjud": "التهجد", "Day length": "النهار",
+}
+
+
 def row(label, time, note="", dim=False):
-    # Values longer than a clock time (Zawal's range, Day length) take no width in the
-    # grid, so the columns, and the centring, follow the normal times; they just run on
-    # to the right.
-    hang = "" if re.fullmatch(r"\d\d:\d\d", time) else "width:0;"
     text = f"{label} <small>({note})</small>" if note else label
     if dim:
         text, time = f"<i>{text}</i>", f"<i>{time}</i>"
     else:
         text = f"<b>{text}</b>"
+    # The Arabic name after the English one, softer and a little smaller. letter-spacing is
+    # reset because some readers (Brief You) space out all text, which breaks Arabic joins.
+    if label in ARABIC_NAMES:
+        text += (f' <span lang="ar" dir="rtl" style="font-size:.82em;opacity:.6;font-style:normal;'
+                 f'font-weight:normal;letter-spacing:0 !important;white-space:nowrap">'
+                 f'{ARABIC_NAMES[label]}</span>')
     # One line of the timings grid (see timings_grid): the row is display:contents, so its
-    # name and time become the grid's cells. Without styles it reads "Fajr 05:23".
-    return (f'<div style="display:contents"><span style="grid-column:2;padding-right:2.5em">{text}</span> '
-            f'<span style="grid-column:3;{hang}white-space:nowrap;font-variant-numeric:tabular-nums">'
-            f'{time}</span></div>')
+    # name and time become the grid's cells. The time sits in a soft rounded chip on the
+    # right, tinted from the text colour (so it suits dark and light readers alike), a
+    # little stronger for the five prayers. Without styles it reads "Fajr 05:23".
+    tint = 7 if dim else 12
+    chip = (f"justify-self:end;margin:3px 0;padding:1px 12px;border-radius:999px;white-space:nowrap;"
+            f"font-variant-numeric:tabular-nums;background:rgba(128,128,128,{tint / 100 * 1.3:.2f});"
+            f"background:color-mix(in srgb, currentColor {tint}%, transparent)")
+    return (f'<div style="display:contents"><span style="padding:5px 1em 5px 0">{text}</span> '
+            f'<span style="{chip}">{time}</span></div>')
 
 
 def timings_grid(prayers, extras):
-    """The prayers and the extra times in one grid: two columns in the middle of the page
-    (sized to the widest name and time across both sections, so the two sections line up
-    with each other and with themselves), with equal space either side to centre them, and
-    a full-width divider between the sections. Plain divs rather than a table, because
-    readers restyle tables (Brief You indents them and turns their rows into blocks)."""
+    """The prayers and the extra times in one grid: names on the left (lined up with the
+    text above), times in chips on the right edge, and a full-width divider between the
+    sections. Plain divs rather than a table, because readers restyle tables (Brief You
+    indents them and turns their rows into blocks)."""
     divider = '<hr style="grid-column:1 / -1;width:100%">'
-    # The right side always keeps room for the longer values to run into (Zawal's range):
-    # with space to spare both sides are equal; when tight, the block shifts left to fit.
-    return (f'<div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto minmax(3.3em,1fr);'
-            f'row-gap:2px">{"".join(prayers)}{divider}{"".join(extras)}</div>')
+    return (f'<div style="display:grid;grid-template-columns:1fr auto;align-items:center">'
+            f'{"".join(prayers)}{divider}{"".join(extras)}</div>')
 
 
 def prayer_list(day, data):
@@ -351,7 +362,8 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
     friday = day.weekday() == 4
 
     prayers = [
-        row("Fajr", hm(t["Fajr"]), "Sehri ends" if ramadan else ""),
+        # "Sehri", as Pakistani timetables label it (the card says "Sehri ends" in full).
+        row("Fajr", hm(t["Fajr"]), "Sehri" if ramadan else ""),
         row("Jumu'ah" if friday else "Dhuhr", hm(t["Dhuhr"])),
         row("Asr", hm(t["Asr"])),
         row("Maghrib", hm(t["Maghrib"]), "Iftar" if ramadan else ""),
