@@ -261,8 +261,17 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
             f"{n} {hm(t[k])}" for n, k in zip(names, keys))
         img = (f'<p><img src="{escape(card_url)}" width="1280" height="800" '
                f'alt="{escape(alt, {chr(34): "&quot;"})}"></p>')
+    # On the 29th, Ruet-e-Hilal meets that evening to decide when the next month begins:
+    # a nudge to compare their announcement with tomorrow's Hijri date in this feed.
+    moon_note = ""
+    if int(h["day"]) == 29:
+        next_month = HIJRI_MONTHS[month_no % 12]
+        moon_note = (f"Ruet-e-Hilal meets this evening for the {next_month} moon. "
+                     f"If tomorrow's Hijri date here doesn't match their announcement, "
+                     f"change HIJRI_ADJUST in generate_feed.py.")
+    note_html = f"<p><i>🌙 {escape(moon_note)}</i></p>" if moon_note else ""
     html = (f"{img}<p><b>{heading}</b><br>{hijri}{' · Ramadan Mubarak' if ramadan else ''}</p>"
-            f"<hr><table>{''.join(prayers)}"
+            f"{note_html}<hr><table>{''.join(prayers)}"
             f'<tr><td colspan="2"><hr></td></tr>'
             f"{''.join(extras)}</table>")
 
@@ -278,6 +287,8 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
     summary = " · ".join(f"{n} {tm}" for n, tm, _ in prayer_list(day, data))
     summary += (f" — Sunrise {hm(t['Sunrise'])} · Sunset {hm(t['Sunset'])} · "
                 f"Tahajjud {hm(t['Lastthird'])}")
+    if moon_note:
+        summary = f"🌙 Moon-sighting evening: check tomorrow's Hijri date. {summary}"
     thumb = (f'\n      <media:thumbnail url="{escape(strip_url)}" width="1200" height="480"/>'
              if strip_url else "")
     return f"""    <item>

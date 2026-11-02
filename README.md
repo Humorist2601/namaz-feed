@@ -42,6 +42,10 @@ The Hijri date is calculated, then shifted by `HIJRI_ADJUST` to match Pakistan's
 sighting (Ruet-e-Hilal is usually a day behind the calculation, hence `-1`). If you
 notice the feed's Hijri date is a day off, change it to `0` or `-2`.
 
+To make that easy to notice, the item for the 29th of each Hijri month carries a 🌙 note:
+Ruet-e-Hilal meets that evening, so compare their announcement with the next day's
+Hijri date in the feed.
+
 ### Saved timings (`data/`)
 
 Prayer times are fixed by astronomy, so they're fetched a month at a time and saved
