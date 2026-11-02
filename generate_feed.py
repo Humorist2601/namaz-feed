@@ -4,7 +4,7 @@
 To use a different city, edit the settings below. If TIMEZONE is left empty
 it is detected from the city automatically.
 
-Every run regenerates the last DAYS days. From NEXT_DAY_FROM (9 PM) onward
+Every run regenerates the last DAYS days. From NEXT_DAY_FROM (8 PM) onward
 the newest item is tomorrow, so the next day's timings arrive the evening before.
 
 Timings are saved a month at a time in data/ and fetched from the API only when a
@@ -32,7 +32,7 @@ TIMEZONE = ""      # empty = detect from the city, or e.g. "Asia/Karachi"
 METHOD = "1"       # 1 Karachi, 2 ISNA, 3 Muslim World League, 4 Umm al-Qura, 5 Egypt
 SCHOOL = "1"       # Asr: 1 = Hanafi, 0 = Shafi'i
 DAYS = 7           # how many recent days the feed keeps
-NEXT_DAY_FROM = 21 # from this hour (local time), the newest item is tomorrow
+NEXT_DAY_FROM = 20 # from this hour (local time), the newest item is tomorrow
 # Days to shift the Hijri date to match local moon sighting. The API calculates the
 # Hijri date; Pakistan follows Ruet-e-Hilal, which is usually a day behind (-1).
 # If the feed's Hijri date is ever a day off from Pakistan's, change this to 0 or -2.
