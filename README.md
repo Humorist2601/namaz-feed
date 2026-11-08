@@ -14,7 +14,7 @@ Runs itself on GitHub for free; no server, no app, nothing to maintain.</p>
 
 ## What you get
 
-Every afternoon a new item arrives with **tomorrow's** timings, ready for the evening, titled like
+Every evening, after 17:00, a new item arrives with **tomorrow's** timings, titled like
 `3 Nov · 22 Jumada al-Ula`.
 
 **The card.** Each item opens with an image of the day: the five prayers in glass tiles
@@ -77,13 +77,13 @@ straight away.
 | `METHOD` | `"1"` | Calculation method: 1 Karachi, 2 ISNA, 3 Muslim World League, 4 Umm al-Qura, 5 Egypt ([all IDs](https://api.aladhan.com/v1/methods)) |
 | `SCHOOL` | `"1"` | Asr: 1 = Hanafi, 0 = Shafi'i |
 | `DAYS` | `7` | How many recent days the feed keeps |
-| `NEXT_DAY_FROM` | `14` | From this hour (local time), the newest item is tomorrow |
+| `NEXT_DAY_FROM` | `17` | From this hour (local time), the newest item is tomorrow |
 | `HIJRI_ADJUST` | `-1` | Days to shift the Hijri date to match local moon sighting (see below) |
 | `CARD_THEME` | `"dark"` | `"dark"` for dark-mode readers, `"light"` for light-mode readers |
 
-**Another time zone?** The daily run is set for 14:47 Pakistan time. GitHub often starts
-scheduled runs hours late, so it starts early enough for the item to be there by the
-evening even then. Change the `cron` time in `.github/workflows/feed.yml` (it's in UTC)
+**Another time zone?** The daily run is set for 17:17 Pakistan time (12:17 UTC). GitHub
+never starts a scheduled run early, but at busy times (US working hours) it can start it
+hours late, so the item arrives after 17:00, sometimes not until later in the evening. Change the `cron` time in `.github/workflows/feed.yml` (it's in UTC)
 and `NEXT_DAY_FROM` to match. Avoid minute `0`: GitHub delays or drops scheduled runs at
 the start of busy hours.
 
