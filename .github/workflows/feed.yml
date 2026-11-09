@@ -2,12 +2,13 @@ name: Update namaz feed
 
 on:
   schedule:
-    # 11:17 UTC = 16:17 in Pakistan (PKT, UTC+5): publishes tomorrow's timings in the
-    # evening. GitHub never starts a scheduled run early, but at busy times (US working
-    # hours) it can start it hours late (evening runs started 4-6 h late in Nov 2026).
+    # The daily run is started at 21:00 Pakistan time by an outside timer (cron-job.org,
+    # through workflow_dispatch below), because GitHub's own schedule often starts runs
+    # hours late in the evening, or skips them. This schedule is only the backup:
+    # 16:17 UTC = 21:17 PKT, so if the timer misses a day the item still arrives, late.
     # Not on the hour: GitHub delays or drops scheduled runs at the start of busy hours.
-    - cron: "17 11 * * *"
-  workflow_dispatch:        # lets you run it manually from the Actions tab
+    - cron: "17 16 * * *"
+  workflow_dispatch:        # the 21:00 timer, or a manual run from the Actions tab
   push:
     branches: [main]
 

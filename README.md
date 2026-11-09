@@ -14,7 +14,7 @@ Runs itself on GitHub for free; no server, no app, nothing to maintain.</p>
 
 ## What you get
 
-Every evening, after 16:00, a new item arrives with **tomorrow's** timings, titled like
+Every evening at 21:00 a new item arrives with **tomorrow's** timings, titled like
 `3 Nov · 22 Jumada al-Ula`.
 
 **The card.** Each item opens with an image of the day: the five prayers in glass tiles
@@ -77,15 +77,25 @@ straight away.
 | `METHOD` | `"1"` | Calculation method: 1 Karachi, 2 ISNA, 3 Muslim World League, 4 Umm al-Qura, 5 Egypt ([all IDs](https://api.aladhan.com/v1/methods)) |
 | `SCHOOL` | `"1"` | Asr: 1 = Hanafi, 0 = Shafi'i |
 | `DAYS` | `7` | How many recent days the feed keeps |
-| `NEXT_DAY_FROM` | `16` | From this hour (local time), the newest item is tomorrow |
+| `NEXT_DAY_FROM` | `21` | From this hour (local time), the newest item is tomorrow |
 | `HIJRI_ADJUST` | `-1` | Days to shift the Hijri date to match local moon sighting (see below) |
 | `CARD_THEME` | `"dark"` | `"dark"` for dark-mode readers, `"light"` for light-mode readers |
 
-**Another time zone?** The daily run is set for 16:17 Pakistan time (11:17 UTC). GitHub
-never starts a scheduled run early, but at busy times (US working hours) it can start it
-hours late, so the item arrives after 16:00, sometimes not until later in the evening. Change the `cron` time in `.github/workflows/feed.yml` (it's in UTC)
-and `NEXT_DAY_FROM` to match. Avoid minute `0`: GitHub delays or drops scheduled runs at
-the start of busy hours.
+**On time every evening.** GitHub's own schedule often starts evening runs hours late,
+or skips them, so the run is started at 21:00 Pakistan time by a free outside timer:
+a [cron-job.org](https://cron-job.org) job that asks GitHub to run the workflow, using a
+fine-grained token limited to this repository's **Actions (read and write)**:
+
+- URL: `https://api.github.com/repos/<owner>/namaz-feed/actions/workflows/feed.yml/dispatches`
+- Method `POST`, body `{"ref":"main"}`
+- Headers: `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`,
+  `X-GitHub-Api-Version: 2022-11-28`, `Content-Type: application/json`,
+  `User-Agent: namaz-feed-timer`
+
+A successful call returns `204`. GitHub's own schedule stays on at 21:17 as a backup: if the
+timer misses a day, the item still arrives, just late (both runs produce the same items).
+Renew the token before it expires. For another time zone, change the timer, the backup
+`cron` (in UTC) and `NEXT_DAY_FROM`.
 
 ## How it works
 
