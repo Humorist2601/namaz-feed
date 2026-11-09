@@ -143,5 +143,6 @@ How the extra times are worked out:
 | `generate_feed.py` | Settings, timings, notes and the feed itself |
 | `card.py` | Draws the card and the thumbnail strip |
 | `.github/workflows/feed.yml` | The nightly run and deployment to GitHub Pages |
+| `.github/workflows/cleanup.yml` | Every Sunday, deletes finished runs older than 7 days |
 | `data/` | Saved monthly timings (managed automatically) |
 | `assets/` | Icon, fonts (with their licences) and README images |

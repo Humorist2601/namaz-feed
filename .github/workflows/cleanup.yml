@@ -1,0 +1,29 @@
+name: Weekly clean-up
+
+# Deletes finished workflow runs older than a week, so the Actions tab stays short.
+on:
+  schedule:
+    - cron: "23 6 * * 0"   # Sundays, 11:23 Pakistan time (cron is in UTC)
+  workflow_dispatch:        # or run it by hand from the Actions tab
+
+permissions:
+  actions: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete runs older than 7 days
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          KEEP_DAYS: 7
+        run: |
+          cutoff=$(date -u -d "$KEEP_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          ids=$(gh api --paginate "repos/$REPO/actions/runs?per_page=100" \
+            --jq ".workflow_runs[] | select(.status == \"completed\" and .created_at < \"$cutoff\") | .id")
+          count=0
+          for id in $ids; do
+            gh api -X DELETE "repos/$REPO/actions/runs/$id" --silent && count=$((count + 1))
+          done
+          echo "Deleted $count runs from before $cutoff."
