@@ -29,9 +29,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -39,7 +39,7 @@ jobs:
       - name: Install card renderer
         run: |
           pip install playwright==1.63.0 pillow
-          python -m playwright install --with-deps chromium
+          python -m playwright install chromium
 
       - name: Generate feed
         env:
@@ -56,7 +56,7 @@ jobs:
             exit 0
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@://github.com"
           git commit -m "Save prayer timings data"
           git pull --rebase origin main && git push origin HEAD:main \
             || echo "::warning::Couldn't save timings; the next run will fetch them again."
