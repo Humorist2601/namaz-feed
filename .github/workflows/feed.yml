@@ -18,13 +18,16 @@ permissions:
   id-token: write
   actions: write   # lets the keep-alive step stop GitHub pausing this schedule
 
+# One run at a time. A run that starts while another is going waits for it instead of
+# cancelling it, so a push at 21:00 doesn't cancel the timer's run halfway through.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15   # a stuck run is stopped instead of holding the queue for hours
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -36,10 +39,17 @@ jobs:
           python-version: "3.12"
 
       # Headless Chromium draws each day's card image (card.py); Pillow compresses them.
+      # Downloads are retried, and if they still fail the run carries on: the feed goes
+      # out with text only rather than not at all.
       - name: Install card renderer
+        continue-on-error: true
         run: |
-          pip install playwright==1.63.0 pillow
-          python -m playwright install chromium
+          for attempt in 1 2 3; do
+            pip install playwright==1.63.0 pillow && python -m playwright install chromium && exit 0
+            echo "::warning::Install attempt $attempt failed; retrying in 20 s."
+            sleep 20
+          done
+          exit 1
 
       - name: Generate feed
         env:
@@ -56,17 +66,17 @@ jobs:
             exit 0
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@://github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Save prayer timings data"
           git pull --rebase origin main && git push origin HEAD:main \
             || echo "::warning::Couldn't save timings; the next run will fetch them again."
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: public
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       # GitHub pauses scheduled workflows after 60 days without repo activity.
       # This re-enables the workflow via the API, resetting that timer.
