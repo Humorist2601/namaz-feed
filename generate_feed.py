@@ -400,9 +400,7 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
     # Each day's item is "published" the evening before, when it first appears.
     eve = day - timedelta(days=1)
     pub = datetime(eve.year, eve.month, eve.day, NEXT_DAY_FROM, tzinfo=tz)
-    # Letters, digits and dashes only, so any city name gives a valid, stable ID.
-    slug = re.sub(r"[^a-z0-9]+", "-", CITY.lower()).strip("-")
-    guid = f"namaz-{slug}-{day.isoformat()}"
+    guid = guid_for(day)
     link = f"{FEED_URL}#{day.isoformat()}" if FEED_URL else ""
     link_tag = f"\n      <link>{escape(link)}</link>" if link else ""
     # A short, readable summary for list and Triage views (they show <description> as
@@ -425,8 +423,8 @@ def build_item(day, data, tz, card_url=None, strip_url=None):
     </item>"""
 
 
-def main():
-    cal = Calendar()
+def newest_day(cal):
+    """The city's time zone, the local time now, and the day the newest item should be."""
     tz_name = TIMEZONE
     if not tz_name:  # let the API tell us the city's time zone (this month is needed anyway)
         tz_name = cal.get(datetime.now(timezone.utc).date())["meta"]["timezone"]
@@ -435,6 +433,36 @@ def main():
     newest = now_local.date()
     if now_local.hour >= NEXT_DAY_FROM:
         newest += timedelta(days=1)  # evening run: publish tomorrow's timings
+    return tz_name, tz, now_local, newest
+
+
+def guid_for(day):
+    # Letters, digits and dashes only, so any city name gives a valid, stable ID.
+    slug = re.sub(r"[^a-z0-9]+", "-", CITY.lower()).strip("-")
+    return f"namaz-{slug}-{day.isoformat()}"
+
+
+def already_published():
+    """True if the live feed already has the item this run would add.
+
+    The backup run uses this to stand down when the 21:00 run has already done the job.
+    If the feed can't be read, it answers False, so the backup builds the feed anyway."""
+    _, _, _, newest = newest_day(Calendar())
+    try:
+        url = f"{FEED_URL}?check={int(time.time())}"  # skip any cached copy
+        with urllib.request.urlopen(url, timeout=30) as r:
+            live = r.read().decode("utf-8")
+    except Exception as e:
+        print(f"couldn't read the live feed ({e}); building it anyway")
+        return False
+    found = f">{guid_for(newest)}<" in live
+    print(f"{newest} item {'already published' if found else 'not published yet'}")
+    return found
+
+
+def main():
+    cal = Calendar()
+    tz_name, tz, now_local, newest = newest_day(cal)
 
     days = []
     for i in range(DAYS):
@@ -534,4 +562,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--published"]:  # exit 0 if the live feed is already up to date
+        sys.exit(0 if already_published() else 1)
     main()

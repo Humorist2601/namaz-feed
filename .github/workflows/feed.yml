@@ -25,7 +25,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The backup run first checks the live feed: if the 21:00 run already published
+  # tomorrow's item, it stops here. Every other run (the timer, a push, a manual run)
+  # always builds.
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'schedule'
+
+      - id: decide
+        env:
+          FEED_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/feed.xml
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && python3 generate_feed.py --published; then
+            echo "The 21:00 run already did tonight's update; the backup isn't needed."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # GitHub pauses scheduled workflows after 60 days without repo activity.
+      # This re-enables the workflow via the API, resetting that timer. It's here so it
+      # runs every day, even when the backup isn't needed.
+      - name: Keep schedule alive
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/feed.yml/enable"
+
   build-and-deploy:
+    needs: check
+    if: needs.check.outputs.build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15   # a stuck run is stopped instead of holding the queue for hours
     environment:
@@ -77,11 +111,3 @@ jobs:
           path: public
       - id: deploy
         uses: actions/deploy-pages@v5
-
-      # GitHub pauses scheduled workflows after 60 days without repo activity.
-      # This re-enables the workflow via the API, resetting that timer.
-      - name: Keep schedule alive
-        if: github.event_name == 'schedule'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/feed.yml/enable"

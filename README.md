@@ -92,8 +92,9 @@ fine-grained token limited to this repository's **Actions (read and write)**:
   `X-GitHub-Api-Version: 2022-11-28`, `Content-Type: application/json`,
   `User-Agent: namaz-feed-timer`
 
-A successful call returns `204`. GitHub's own schedule stays on at 21:17 as a backup: if the
-timer misses a day, the item still arrives, just late (both runs produce the same items).
+A successful call returns `204`. GitHub's own schedule stays on at 21:17 as a backup. It
+first checks the live feed: if tomorrow's item is already there, it stops without
+rebuilding; if the timer missed a day, it builds the feed, so the item still arrives, just late.
 Renew the token before it expires. For another time zone, change the timer, the backup
 `cron` (in UTC) and `NEXT_DAY_FROM`.
 
